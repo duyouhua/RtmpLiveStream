@@ -16,6 +16,7 @@ public class AudioPusher extends Pusher {
 	private int minBufferSize;
 	private AudioRecord audioRecord;
 
+
 	public AudioPusher(AudioParam param, PusherNative pusherNative) {
 		super(pusherNative);
 		mParam = param;
@@ -89,11 +90,11 @@ public class AudioPusher extends Pusher {
 		public void run() {
 			while (mPusherRuning
 					&& audioRecord.getRecordingState() == AudioRecord.RECORDSTATE_RECORDING) {
-				byte[] buffer = new byte[2048];
-				int len = audioRecord.read(buffer, 0, buffer.length);
+				final byte[] buffer = new byte[2048];
+				final int len = audioRecord.read(buffer, 0, buffer.length);
 				System.out.println(len);
 				if (0 < len) {
-					mNative.fireAudio(buffer, len);
+					mNative.pushAudio(buffer, len);
 				}
 			}
 		}

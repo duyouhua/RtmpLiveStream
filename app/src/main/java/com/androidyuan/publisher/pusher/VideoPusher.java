@@ -16,6 +16,10 @@ import com.jutong.live.jni.PusherNative;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class VideoPusher extends Pusher implements Callback, PreviewCallback {
 
@@ -23,6 +27,7 @@ public class VideoPusher extends Pusher implements Callback, PreviewCallback {
 	private final static int SCREEN_PORTRAIT = 0;
 	private final static int SCREEN_LANDSCAPE_LEFT = 90;
 	private final static int SCREEN_LANDSCAPE_RIGHT = 270;
+	ExecutorService previewDataExecutor = Executors.newSingleThreadExecutor();
 	private boolean mPreviewRunning;
 	private Camera mCamera;
 	private SurfaceHolder mHolder;
@@ -31,6 +36,10 @@ public class VideoPusher extends Pusher implements Callback, PreviewCallback {
 	private byte[] raw;
 	private Activity mActivity;
 	private int screen;
+	private int mFrameCount=0;
+	private int mPreviewCount=0;
+	private Timer mTimer;
+
 
 	public VideoPusher(Activity activity, SurfaceHolder surfaceHolder,
 			VideoParam param, PusherNative pusherNative) {
@@ -41,15 +50,35 @@ public class VideoPusher extends Pusher implements Callback, PreviewCallback {
 		surfaceHolder.addCallback(this);
 	}
 
+	private TimerTask createCollectTask()
+	{
+		return new TimerTask() {
+			@Override
+			public void run() {
+
+				Log.d("FPS",mFrameCount+" "+mPreviewCount);
+
+				mFrameCount=0;
+				mPreviewCount=0;
+			}
+		};
+	}
+
 	@Override
 	public void startPusher() {
 		startPreview();
 		mPusherRuning = true;
+
+		mTimer=new Timer();
+		mTimer.schedule(createCollectTask(),1000,1000);
 	}
 
 	@Override
 	public void stopPusher() {
 		mPusherRuning = false;
+		if(mTimer!=null) {
+			mTimer.cancel();
+		}
 	}
 
 	@Override
@@ -212,22 +241,37 @@ public class VideoPusher extends Pusher implements Callback, PreviewCallback {
 	}
 
 	@Override
-	public void onPreviewFrame(byte[] data, Camera camera) {
-		if (mPusherRuning) {
-			switch (screen) {
-			case SCREEN_PORTRAIT:
-				portraitData2Raw(data);
-				break;
-			case SCREEN_LANDSCAPE_LEFT:
-				raw = data;
-				break;
-			case SCREEN_LANDSCAPE_RIGHT:
-				landscapeData2Raw(data);
-				break;
+	public void onPreviewFrame(final byte[] data, final Camera camera) {
+
+		mPreviewCount++;
+		Runnable orientationFixRun=new Runnable() {
+			@Override
+			public void run() {
+				if (mPusherRuning) {
+					switch (screen) {
+						case SCREEN_PORTRAIT:
+							portraitData2Raw(data);
+							break;
+						case SCREEN_LANDSCAPE_LEFT:
+							raw = data;
+							break;
+						case SCREEN_LANDSCAPE_RIGHT:
+							landscapeData2Raw(data);
+							break;
+					}
+
+					mNative.pushVideo(raw);
+					mFrameCount++;
+
+				}
+				camera.addCallbackBuffer(buffer);
 			}
-			mNative.fireVideo(raw);
-		}
-		camera.addCallbackBuffer(buffer);
+		};
+
+
+		previewDataExecutor.execute(orientationFixRun);
+
+
 	}
 
 	private void landscapeData2Raw(byte[] data) {

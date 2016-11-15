@@ -4,6 +4,9 @@ import android.util.Log;
 
 import com.androidyuan.publisher.LiveStateChangeListener;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 
 public class PusherNative {
 
@@ -17,6 +20,10 @@ public class PusherNative {
     public static final int  MSG_ERROR_SETUP_AUDIO_CODEC=-102;//设置音频编码器
     public static final int  MSG_ERROR_SETUP_VIDEO_CODEC=-103;//设置视频编码器
     public static final int  MSG_ERROR_NOT_CONNECTSERVER=-104;//无法连接到服务器
+
+    //使用FIFO 方式的线程池
+    ExecutorService mVideoPushDataExecutor = Executors.newSingleThreadExecutor();
+    ExecutorService mAudioPushDataExecutor = Executors.newSingleThreadExecutor();
 
 
     private LiveStateChangeListener mListener;
@@ -53,9 +60,29 @@ public class PusherNative {
 
     public native void setAudioOptions(int sampleRate, int channel);
 
-    public native void fireVideo(byte[] buffer);
+    public void pushVideo(final byte[] buffer)
+    {
+        mVideoPushDataExecutor.execute(new Runnable() {
+            @Override
+            public void run() {
+                fireVideo(buffer);
+            }
+        });
+    }
 
-    public native void fireAudio(byte[] buffer, int len);
+    public void pushAudio(final byte[] buffer, final int len)
+    {
+        mAudioPushDataExecutor.execute(new Runnable() {
+            @Override
+            public void run() {
+                fireAudio(buffer,len);
+            }
+        });
+    }
+
+    private native void fireVideo(byte[] buffer);
+
+    private native void fireAudio(byte[] buffer, int len);
 
     public native int getInputSamples();
 
