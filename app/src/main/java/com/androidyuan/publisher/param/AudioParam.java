@@ -1,5 +1,7 @@
 package com.androidyuan.publisher.param;
 
+import tv.quanmin.livestreamlibrary.RtmpHelperJNI;
+
 public class AudioParam {
 
 	private int sampleRate = 44100;
@@ -11,6 +13,8 @@ public class AudioParam {
 	}
 
 	public AudioParam() {
+
+		RtmpHelperJNI.spx_denoise_init(sampleRate);
 	}
 
 	public int getSampleRate() {

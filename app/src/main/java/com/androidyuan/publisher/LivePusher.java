@@ -1,6 +1,9 @@
 package com.androidyuan.publisher;
 
 import android.app.Activity;
+import android.content.Context;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.view.SurfaceHolder;
 
 import com.androidyuan.publisher.param.AudioParam;
@@ -8,6 +11,8 @@ import com.androidyuan.publisher.param.VideoParam;
 import com.androidyuan.publisher.pusher.AudioPusher;
 import com.androidyuan.publisher.pusher.VideoPusher;
 import com.jutong.live.jni.PusherNative;
+
+import tv.quanmin.livestreamlibrary.RtmpHelperJNI;
 
 public class LivePusher {
 
@@ -32,6 +37,7 @@ public class LivePusher {
 		videoParam = new VideoParam(width, height, bitrate, fps, cameraId);
 		audioParam = new AudioParam();
 		mNative = new PusherNative();
+		RtmpHelperJNI.setup();
 	}
 
 	public void prepare(SurfaceHolder surfaceHolder) {
@@ -46,16 +52,25 @@ public class LivePusher {
 	public void startPusher(String url) {
 
 		mIsStart = true;
+
+		int result = RtmpHelperJNI.open(url,
+				android.os.Build.MODEL,
+				android.os.Build.VERSION.RELEASE,
+				getNetworkType(),
+				800*1000,
+				15
+				);
+
 		videoPusher.startPusher();
 		audioPusher.startPusher();
-		mNative.startPusher(url);
+
 	}
 
 	public void stopPusher() {
 		mIsStart = false;
 		videoPusher.stopPusher();
 		audioPusher.stopPusher();
-		mNative.stopPusher();
+		RtmpHelperJNI.close();
 	}
 
 	public void switchCamera() {
@@ -70,7 +85,8 @@ public class LivePusher {
 		mNative.setLiveStateChangeListener(null);
 		videoPusher.release();
 		audioPusher.release();
-		mNative.release();
+		RtmpHelperJNI.release();
+
 	}
 
 	public void setLiveStateChangeListener(LiveStateChangeListener listener) {
@@ -92,5 +108,25 @@ public class LivePusher {
 
 	public void setStart(boolean b) {
 		mIsStart=b;
+	}
+
+	public String getNetworkType() {
+		String netType = "unknown";
+		ConnectivityManager connectivityManager = (ConnectivityManager) mActivity.getSystemService(
+				Context.CONNECTIVITY_SERVICE);
+		NetworkInfo networkInfo = connectivityManager.getActiveNetworkInfo();
+		if (networkInfo == null) {
+			return netType;
+		}
+		int nType = networkInfo.getType();
+		if (nType == ConnectivityManager.TYPE_MOBILE) {
+			String extraInfo = networkInfo.getExtraInfo();
+			if(extraInfo != null){
+				netType = extraInfo.toLowerCase();
+			}
+		} else if (nType == ConnectivityManager.TYPE_WIFI) {
+			netType = "wifi";
+		}
+		return netType;
 	}
 }

@@ -58,7 +58,6 @@ public class PusherNative {
     public native void setVideoOptions(int width, int height, int bitrate,
             int fps);
 
-    public native void setAudioOptions(int sampleRate, int channel);
 
     public void pushVideo(final byte[] buffer)
     {
@@ -83,8 +82,6 @@ public class PusherNative {
     private native void fireVideo(byte[] buffer);
 
     private native void fireAudio(byte[] buffer, int len);
-
-    public native int getInputSamples();
 
     public native boolean startPusher(String url);
 
