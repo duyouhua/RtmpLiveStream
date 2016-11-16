@@ -1,6 +1,7 @@
 package com.androidyuan.publisher.pusher;
 
 import android.app.Activity;
+import android.content.res.Configuration;
 import android.graphics.ImageFormat;
 import android.hardware.Camera;
 import android.hardware.Camera.CameraInfo;
@@ -126,12 +127,18 @@ public class VideoPusher extends Pusher implements Callback, PreviewCallback {
 			mCamera.addCallbackBuffer(buffer);
 			mCamera.setPreviewCallbackWithBuffer(this);
 			mCamera.setPreviewDisplay(mHolder);
+
+			if(!isHorScreen())
+			{
+				mCamera.setDisplayOrientation(90);
+			}
+
 			mCamera.startPreview();
 			mPreviewRunning = true;
 		} catch (Exception ex) {
 			ex.printStackTrace();
 			if (null != mListener) {
-				mListener.onErrorPusher(-100);
+				mListener.onErrorPusher(PusherNative.MSG_ERROR_PREVIEW);
 			}
 		}
 	}
@@ -339,6 +346,18 @@ public class VideoPusher extends Pusher implements Callback, PreviewCallback {
 				}
 			}
 		}
+	}
+
+
+	public boolean isHorScreen() {
+		Configuration mConfiguration = mActivity.getResources().getConfiguration(); //获取设置的配置信息
+		int ori = mConfiguration.orientation; //获取屏幕方向
+		if (ori == Configuration.ORIENTATION_LANDSCAPE) {
+			return true;
+		} else if (ori == Configuration.ORIENTATION_PORTRAIT) {
+			return false;
+		}
+		return false;
 	}
 
 }

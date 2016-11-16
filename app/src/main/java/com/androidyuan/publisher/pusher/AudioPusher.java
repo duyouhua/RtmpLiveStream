@@ -57,7 +57,7 @@ public class AudioPusher extends Pusher {
 			} catch (Throwable th) {
 				th.printStackTrace();
 				if (null != mListener) {
-					mListener.onErrorPusher(-101);
+					mListener.onErrorPusher(PusherNative.MSG_ERROR_AUDIO_RECORD);
 				}
 			}
 		}
